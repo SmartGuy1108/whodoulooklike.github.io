@@ -50,7 +50,7 @@
     
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/ABK8O3BNK/";
-        let model, webcam, isPredicting = false;
+        let model, webcam, ctx, canvas;
         
         async function loadModel() {
             model = await tmImage.load(URL + "model.json", URL + "metadata.json");
@@ -58,20 +58,30 @@
         
         async function startWebcam() {
             try {
-                webcam = document.getElementById("webcam");
-                let stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                webcam.srcObject = stream;
-                isPredicting = true;
-                predictLive();
+                const video = document.getElementById("webcam");
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    setupCanvas();
+                    predictLive();
+                };
             } catch (error) {
                 alert("Camera access denied or unavailable.");
             }
         }
         
+        function setupCanvas() {
+            canvas = document.createElement("canvas");
+            ctx = canvas.getContext("2d");
+        }
+        
         async function predictLive() {
             if (!model) return;
-            while (isPredicting) {
-                const prediction = await model.predict(webcam);
+            const video = document.getElementById("webcam");
+            while (true) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const prediction = await model.predict(canvas);
                 let resultText = `${prediction[0].className}: ${Math.round(prediction[0].probability * 100)}%<br>`;
                 resultText += `${prediction[1].className}: ${Math.round(prediction[1].probability * 100)}%`;
                 document.getElementById("result").innerHTML = resultText;
