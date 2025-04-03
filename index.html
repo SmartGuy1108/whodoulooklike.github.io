@@ -20,7 +20,6 @@
             border: 4px solid white;
             border-radius: 10px;
             margin-top: 20px;
-            display: none;
         }
         #result {
             font-size: 24px;
@@ -44,13 +43,14 @@
 </head>
 <body>
     <h1>Do You Look Like Harry Potter or Spider-Man?</h1>
-    <button onclick="startWebcam()">Allow Camera & Check</button>
+    <button onclick="startWebcam()">Allow Camera & Start</button>
+    <br>
     <video id="webcam" autoplay playsinline></video>
     <p id="result">Result will appear here...</p>
     
     <script>
         const URL = "https://teachablemachine.withgoogle.com/models/ABK8O3BNK/";
-        let model, webcam;
+        let model, webcam, isPredicting = false;
         
         async function loadModel() {
             model = await tmImage.load(URL + "model.json", URL + "metadata.json");
@@ -61,20 +61,22 @@
                 webcam = document.getElementById("webcam");
                 let stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 webcam.srcObject = stream;
-                webcam.style.display = "block";
-                await predict();
+                isPredicting = true;
+                predictLive();
             } catch (error) {
                 alert("Camera access denied or unavailable.");
             }
         }
         
-        async function predict() {
+        async function predictLive() {
             if (!model) return;
-            await new Promise(r => setTimeout(r, 3000)); // Allow time for camera to focus
-            const prediction = await model.predict(webcam);
-            let resultText = `${prediction[0].className}: ${Math.round(prediction[0].probability * 100)}%<br>`;
-            resultText += `${prediction[1].className}: ${Math.round(prediction[1].probability * 100)}%`;
-            document.getElementById("result").innerHTML = resultText;
+            while (isPredicting) {
+                const prediction = await model.predict(webcam);
+                let resultText = `${prediction[0].className}: ${Math.round(prediction[0].probability * 100)}%<br>`;
+                resultText += `${prediction[1].className}: ${Math.round(prediction[1].probability * 100)}%`;
+                document.getElementById("result").innerHTML = resultText;
+                await new Promise(r => setTimeout(r, 500)); // Update every 500ms
+            }
         }
         
         loadModel();
